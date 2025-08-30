@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>⚙️ Administración Taller Mecánico — Firebase SPA</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee; --accent-2:#a78bfa; --danger:#ef4444; --success:#10b981; --warning:#f59e0b; --radius:16px; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Inter,Segoe UI,Roboto,Helvetica,Arial; background: radial-gradient(1200px 1200px at 10% -10%, rgba(34,211,238,.15), transparent 50%), radial-gradient(900px 1000px at 110% 0%, rgba(167,139,250,.12), transparent 40%), var(--bg); color:var(--text)}
+    header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;position:sticky;top:0;z-index:10;background:linear-gradient(180deg, rgba(17,24,39,.95), rgba(17,24,39,.65));backdrop-filter:blur(8px);border-bottom:1px solid rgba(148,163,184,.15)}
+    header h1{font-size:18px;margin:0;font-weight:700}
+    header .env{color:var(--muted);font-size:12px}
+    header .auth-area{display:flex;gap:12px;align-items:center}
+    button,input,select,textarea{background:#0b1220;color:var(--text);border:1px solid rgba(148,163,184,.2);padding:10px 12px;border-radius:12px;outline:none;font:inherit}
+    button{cursor:pointer}
+    button.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0a0a0a;border:none;font-weight:700}
+    button.ghost{background:transparent;border-color:rgba(148,163,184,.35)}
+    button.danger{background:var(--danger);border:none;color:#fff}
+    button.small{padding:6px 10px;border-radius:10px;font-size:12px}
+    .container{max-width:1200px;margin:24px auto;padding:0 16px 40px}
+    .panel{background:rgba(17,24,39,.8);border:1px solid rgba(148,163,184,.15);border-radius:var(--radius);padding:18px;box-shadow:0 40px 80px rgba(0,0,0,.35)}
+    .tabs{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+    .tabs button{border-radius:999px;padding:8px 14px}
+    .tabs button.active{background:linear-gradient(135deg, rgba(34,211,238,.25), rgba(167,139,250,.25));border-color:transparent}
+    .tab-content{display:none;margin-top:16px}
+    .tab-content.active{display:block}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    @media (max-width:900px){ .grid,.grid-3{grid-template-columns:1fr} }
+    .form-card{background:#0a0f1a;border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:16px}
+    .form-card h3{margin:0 0 12px;font-size:16px}
+    .row{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+    .col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}.col-12{grid-column:span 12}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    .muted{color:var(--muted);font-size:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{text-align:left;border-bottom:1px solid rgba(148,163,184,.12);padding:10px;font-size:13px}
+    th{color:var(--muted);font-weight:600}
+    .items{display:grid;gap:8px}
+    .item-row{display:grid;grid-template-columns:2fr 80px 110px 1fr 34px;gap:8px;align-items:center}
+    .badge{padding:3px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(148,163,184,.25);color:var(--text)}
+    .hidden{display:none !important}
+    .sep{height:1px;background:rgba(148,163,184,.15);margin:12px 0}
+    .toast{position:fixed;right:16px;bottom:16px;background:#0a0f1a;border:1px solid rgba(148,163,184,.25);border-radius:12px;padding:10px 14px;font-size:13px;box-shadow:0 20px 60px rgba(0,0,0,.35);opacity:0;transform:translateY(6px);transition:all .25s ease}
+    .toast.show{opacity:1;transform:translateY(0)}
+    code.inline{background:rgba(148,163,184,.15);padding:2px 6px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>⚙️ Administración Taller Mecánico</h1>
+      <div class="env">Aplicación de prueba Firestore CRUD</div>
+    </div>
+    <div class="auth-area">
+      <span id="currentUser" class="muted">Sin sesión</span>
+      <button id="signOutBtn" class="ghost hidden">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- AUTH -->
+    <div class="panel" id="authPanel">
+      <div class="grid">
+        <form id="signInForm" class="form-card">
+          <h3>Iniciar sesión</h3>
+          <label>Correo<input type="email" name="email" required /></label>
+          <label>Contraseña<input type="password" name="password" required /></label>
+          <button class="primary" type="submit">Iniciar sesión</button>
+          <div class="muted">¿No tienes cuenta? Usa el formulario de registro →</div>
+        </form>
+
+        <form id="signUpForm" class="form-card">
+          <h3>Crear cuenta</h3>
+          <label>Correo<input type="email" name="email" required /></label>
+          <label>Contraseña<input type="password" name="password" minlength="6" required /></label>
+          <button class="ghost" type="submit">Crear cuenta</button>
+          <div class="muted">Consejo: configura Reglas de Seguridad de Firestore.</div>
+        </form>
+      </div>
+    </div>
+
+    <!-- APP -->
+    <div id="appPanel" class="panel hidden">
+      <div class="tabs" id="tabs"></div>
+
+      <!-- Clientes -->
+      <section class="tab-content" data-tab="Customers">
+        <div class="grid">
+          <form id="customerForm" class="form-card">
+            <h3>Cliente</h3>
+            <input type="hidden" name="id" />
+            <div class="row">
+              <div class="col-6"><label>Nombre<input name="firstName" required /></label></div>
+              <div class="col-6"><label>Apellido<input name="lastName" required /></label></div>
+              <div class="col-6"><label>Teléfono<input name="phone" /></label></div>
+              <div class="col-6"><label>Correo<input type="email" name="email" /></label></div>
+              <div class="col-12"><label>Dirección<textarea name="address" rows="2"></textarea></label></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="primary" type="submit">Guardar</button>
+              <button class="ghost" type="reset">Limpiar</button>
+            </div>
+          </form>
+
+          <div class="form-card">
+            <h3>Clientes</h3>
+            <table>
+              <thead><tr><th>Nombre</th><th>Teléfono</th><th>Correo</th><th></th></tr></thead>
+              <tbody id="customersList"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Vehículos -->
+      <section class="tab-content" data-tab="Vehicles">
+        <div class="grid">
+          <form id="vehicleForm" class="form-card">
+            <h3>Vehículo</h3>
+            <input type="hidden" name="id" />
+            <div class="row">
+              <div class="col-6"><label>Propietario (Cliente)<select name="customerId" id="vehicleCustomerSelect" required></select></label></div>
+              <div class="col-3"><label>Marca<input name="make" required /></label></div>
+              <div class="col-3"><label>Modelo<input name="model" required /></label></div>
+              <div class="col-3"><label>Año<input type="number" name="year" min="1950" max="2100" required /></label></div>
+              <div class="col-3"><label>VIN<input name="vin" /></label></div>
+              <div class="col-3"><label>Placas<input name="plate" /></label></div>
+              <div class="col-3"><label>Kilometraje<input type="number" name="mileage" min="0" /></label></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="primary" type="submit">Guardar</button>
+              <button class="ghost" type="reset">Limpiar</button>
+            </div>
+          </form>
+
+          <div class="form-card">
+            <h3>Vehículos</h3>
+            <table>
+              <thead><tr><th>Propietario</th><th>Vehículo</th><th>VIN</th><th>Placas</th><th>Kms</th><th></th></tr></thead>
+              <tbody id="vehiclesList"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Técnicos -->
+      <section class="tab-content" data-tab="Technicians">
+        <div class="grid">
+          <form id="techForm" class="form-card">
+            <h3>Técnico</h3>
+            <input type="hidden" name="id" />
+            <div class="row">
+              <div class="col-6"><label>Nombre<input name="name" required /></label></div>
+              <div class="col-6"><label>Teléfono<input name="phone" /></label></div>
+              <div class="col-12"><label>Habilidades (separadas por comas)<input name="skills" placeholder="motor, frenos, eléctrico" /></label></div>
+              <div class="col-4"><label>Tarifa por hora (MXN)<input type="number" step="0.01" min="0" name="hourlyRate" /></label></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="primary" type="submit">Guardar</button>
+              <button class="ghost" type="reset">Limpiar</button>
+            </div>
+          </form>
+
+          <div class="form-card">
+            <h3>Técnicos</h3>
+            <table>
+              <thead><tr><th>Nombre</th><th>Teléfono</th><th>Tarifa</th><th>Habilidades</th><th></th></tr></thead>
+              <tbody id="techsList"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Inventario -->
+      <section class="tab-content" data-tab="Inventory">
+        <div class="grid">
+          <form id="partForm" class="form-card">
+            <h3>Artículo de Inventario</h3>
+            <input type="hidden" name="id" />
+            <div class="row">
+              <div class="col-4"><label>No. de parte<input name="partNumber" required /></label></div>
+              <div class="col-8"><label>Nombre<input name="name" required /></label></div>
+              <div class="col-12"><label>Descripción<textarea name="description" rows="2"></textarea></label></div>
+              <div class="col-6"><label>Proveedor<input name="supplier" /></label></div>
+              <div class="col-3"><label>Costo<input type="number" step="0.01" min="0" name="cost" /></label></div>
+              <div class="col-3"><label>Precio<input type="number" step="0.01" min="0" name="price" /></label></div>
+              <div class="col-3"><label>Existencia<input type="number" step="1" min="0" name="qtyOnHand" /></label></div>
+              <div class="col-3"><label>Nivel de reorden<input type="number" step="1" min="0" name="reorderLevel" /></label></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="primary" type="submit">Guardar</button>
+              <button class="ghost" type="reset">Limpiar</button>
+            </div>
+          </form>
+
+          <div class="form-card">
+            <h3>Inventario</h3>
+            <table>
+              <thead><tr><th>No. de parte</th><th>Nombre</th><th>Precio</th><th>Existencia</th><th></th></tr></thead>
+              <tbody id="partsList"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Órdenes de Trabajo -->
+      <section class="tab-content" data-tab="Work Orders">
+        <div class="grid">
+          <form id="woForm" class="form-card">
+            <h3>Orden de Trabajo</h3>
+            <input type="hidden" name="id" />
+            <div class="row">
+              <div class="col-4"><label>No. OT<input name="woNumber" placeholder="Se autogenera si se deja vacío" /></label></div>
+              <div class="col-4"><label>Vehículo<select name="vehicleId" id="woVehicleSelect" required></select></label></div>
+              <div class="col-4"><label>Técnico<select name="technicianId" id="woTechSelect" required></select></label></div>
+              <div class="col-4"><label>Estatus
+                <select name="status" required>
+                  <option>Borrador</option>
+                  <option>Programada</option>
+                  <option>En Proceso</option>
+                  <option>Completada</option>
+                  <option>Cancelada</option>
+                </select></label>
+              </div>
+              <div class="col-4"><label>Fecha/hora programada<input type="datetime-local" name="scheduledAt" /></label></div>
+              <div class="col-4"><label>Horas de mano de obra<input type="number" step="0.1" min="0" name="laborHours" /></label></div>
+              <div class="col-4"><label>Tarifa de mano de obra (MXN)<input type="number" step="0.01" min="0" name="laborRate" placeholder="por defecto usa la tarifa del técnico" /></label></div>
+              <div class="col-12"><label>Queja del cliente<textarea name="complaint" rows="2"></textarea></label></div>
+              <div class="col-12"><label>Diagnóstico / Notas<textarea name="notes" rows="2"></textarea></label></div>
+            </div>
+
+            <div class="sep"></div>
+            <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+              <h4 style="margin:0">Conceptos</h4>
+              <button type="button" id="addWoItemBtn" class="small ghost">+ Agregar concepto</button>
+            </div>
+            <div id="woItems" class="items" aria-live="polite"></div>
+            <div class="muted" style="margin-top:6px;">Cada concepto: descripción, cantidad, precio unitario, (opcional) Id de parte</div>
+
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="primary" type="submit">Guardar</button>
+              <button class="ghost" type="reset">Limpiar</button>
+            </div>
+          </form>
+
+          <div class="form-card">
+            <h3>Órdenes de Trabajo</h3>
+            <table>
+              <thead><tr><th>OT</th><th>Vehículo</th><th>Técnico</th><th>Estatus</th><th>Mano de obra</th><th>Total</th><th></th></tr></thead>
+              <tbody id="woList"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Citas -->
+      <section class="tab-content" data-tab="Appointments">
+        <div class="grid">
+          <form id="apptForm" class="form-card">
+            <h3>Cita</h3>
+            <input type="hidden" name="id" />
+            <div class="row">
+              <div class="col-4"><label>Cliente<select name="customerId" id="apptCustomerSelect" required></select></label></div>
+              <div class="col-4"><label>Vehículo<select name="vehicleId" id="apptVehicleSelect" required></select></label></div>
+              <div class="col-4"><label>Técnico<select name="technicianId" id="apptTechSelect" required></select></label></div>
+              <div class="col-6"><label>Fecha/hora<input type="datetime-local" name="scheduledAt" required /></label></div>
+              <div class="col-6"><label>Motivo<input name="reason" placeholder="cambio de aceite, diagnóstico, etc." /></label></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="primary" type="submit">Guardar</button>
+              <button class="ghost" type="reset">Limpiar</button>
+            </div>
+          </form>
+
+          <div class="form-card">
+            <h3>Citas</h3>
+            <table>
+              <thead><tr><th>Cuándo</th><th>Cliente</th><th>Vehículo</th><th>Técnico</th><th>Motivo</th><th></th></tr></thead>
+              <tbody id="apptList"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Facturas -->
+      <section class="tab-content" data-tab="Invoices">
+        <div class="grid">
+          <form id="invoiceForm" class="form-card">
+            <h3>Factura</h3>
+            <input type="hidden" name="id" />
+            <div class="row">
+              <div class="col-4"><label>No. de factura<input name="number" placeholder="Se autogenera si se deja vacío" /></label></div>
+              <div class="col-4"><label>Orden de Trabajo<select name="workOrderId" id="invoiceWoSelect" required></select></label></div>
+              <div class="col-4"><label>Estatus
+                <select name="status" required>
+                  <option>Borrador</option>
+                  <option>Enviada</option>
+                  <option>Pagada</option>
+                  <option>Cancelada</option>
+                </select></label>
+              </div>
+              <div class="col-4"><label>Subtotal<input type="number" step="0.01" min="0" name="subtotal" /></label></div>
+              <div class="col-4"><label>IVA (%)<input type="number" step="0.01" min="0" name="taxPercent" value="16" /></label></div>
+              <div class="col-4"><label>Descuento<input type="number" step="0.01" min="0" name="discount" value="0" /></label></div>
+              <div class="col-12"><label>Notas<textarea name="notes" rows="2"></textarea></label></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="primary" type="submit">Guardar</button>
+              <button class="ghost" type="reset">Limpiar</button>
+            </div>
+          </form>
+
+          <div class="form-card">
+            <h3>Facturas</h3>
+            <table>
+              <thead><tr><th>#</th><th>OT</th><th>Estatus</th><th>Total</th><th></th></tr></thead>
+              <tbody id="invoiceList"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Firebase SDKs (modular v10+) -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { getFirestore, collection, addDoc, setDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDJmGjLAmTuxlkcN0z8orQT-_zsjTCMQUg",
+  authDomain: "enovoautomotriz-61e44.firebaseapp.com",
+  projectId: "enovoautomotriz-61e44",
+  storageBucket: "enovoautomotriz-61e44.firebasestorage.app",
+  messagingSenderId: "283225674595",
+  appId: "1:283225674595:web:dea6824d0bdd5508e33956",
+  measurementId: "G-BHEMDRKN7R"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const $ = (s)=>document.querySelector(s); const $$=(s)=>Array.from(document.querySelectorAll(s));
+
+    function toast(msg, kind='info'){ const t=$('#toast'); t.textContent=msg; t.style.borderColor = kind==='error'?'rgba(239,68,68,.6)':'rgba(34,197,94,.5)'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+    function formToObj(form){ const data=Object.fromEntries(new FormData(form).entries()); for(const k in data){ if(data[k]==='') continue; if(!isNaN(data[k]) && ['phone','vin','plate','partNumber'].indexOf(k)===-1){ data[k]=Number(data[k]); } } return data; }
+    function resetForm(form){ form.reset(); const idInput=form.querySelector('input[name="id"]'); if(idInput) idInput.value=''; if(form.id==='woForm') $('#woItems').innerHTML=''; }
+
+    // Tabs
+    const TAB_KEYS=['Customers','Vehicles','Technicians','Inventory','Work Orders','Appointments','Invoices'];
+    const TAB_LABELS={ Customers:'Clientes', Vehicles:'Vehículos', Technicians:'Técnicos', Inventory:'Inventario', 'Work Orders':'Órdenes de Trabajo', Appointments:'Citas', Invoices:'Facturas' };
+    const tabsEl=$('#tabs'); TAB_KEYS.forEach((key,i)=>{ const b=document.createElement('button'); b.textContent=TAB_LABELS[key]; b.dataset.key=key; b.className='ghost'+(i===0?' active':''); b.addEventListener('click',()=>setActiveTab(key)); tabsEl.appendChild(b); });
+    function setActiveTab(key){ $$('.tabs button').forEach(b=>b.classList.toggle('active', b.dataset.key===key)); $$('.tab-content').forEach(sec=>sec.classList.toggle('active', sec.dataset.tab===key)); localStorage.setItem('activeTab', key); }
+    setActiveTab(localStorage.getItem('activeTab')||TAB_KEYS[0]);
+
+    // Auth state
+    onAuthStateChanged(auth,(user)=>{
+      const authed=!!user;
+      $('#authPanel').classList.toggle('hidden', authed);
+      $('#appPanel').classList.toggle('hidden', !authed);
+      $('#signOutBtn').classList.toggle('hidden', !authed);
+      $('#currentUser').textContent = authed ? (user.email||'Sesión iniciada') : 'Sin sesión';
+      if(authed) initializeDataBindings();
+    });
+    $('#signOutBtn').addEventListener('click',()=>signOut(auth));
+    $('#signInForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const {email,password}=formToObj(e.target); try{ await signInWithEmailAndPassword(auth,email,String(password)); toast('Sesión iniciada'); }catch(err){ toast(err.message,'error'); } });
+    $('#signUpForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const {email,password}=formToObj(e.target); try{ await createUserWithEmailAndPassword(auth,email,String(password)); toast('Cuenta creada'); }catch(err){ toast(err.message,'error'); } });
+
+    // Firestore helpers
+    const col=(n)=>collection(db,n); const byId=(n,id)=>doc(db,n,id);
+    function autoNumber(prefix){ const now=new Date(); const y=now.getFullYear(); const m=String(now.getMonth()+1).padStart(2,'0'); const d=String(now.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).slice(2,6).toUpperCase(); return `${prefix}-${y}${m}${d}-${rand}`; }
+    const cache={ customers:new Map(), vehicles:new Map(), technicians:new Map() };
+    const nameOfCustomer=(id)=>{const c=cache.customers.get(id); return c?`${c.firstName||''} ${c.lastName||''}`.trim():'—'};
+    const labelOfVehicle=(id)=>{const v=cache.vehicles.get(id); return v?`${v.year||''} ${v.make||''} ${v.model||''}`.trim():'—'};
+    const nameOfTech=(id)=>{const t=cache.technicians.get(id); return t?t.name:'—'};
+    const fmtMoney=(n)=>{ try{ return new Intl.NumberFormat('es-MX',{style:'currency', currency:'MXN', minimumFractionDigits:2}).format(Number(n)||0);}catch{return `$${Number(n).toFixed(2)} MXN`;}};
+
+    let unsub=[];
+    function initializeDataBindings(){ unsub.forEach(u=>u()); unsub=[];
+      // Clientes
+      unsub.push(onSnapshot(query(col('customers'), orderBy('lastName')), (snap)=>{ const tbody=$('#customersList'); tbody.innerHTML=''; const selects=[$('#vehicleCustomerSelect'), $('#apptCustomerSelect')]; selects.forEach(s=>s.innerHTML='<option value="">— Selecciona —</option>'); snap.forEach(d=>{ const c={id:d.id, ...d.data()}; cache.customers.set(c.id,c); const tr=document.createElement('tr'); tr.innerHTML=`<td>${(c.firstName||'')+' '+(c.lastName||'')}</td><td>${c.phone||''}</td><td>${c.email||''}</td><td style="text-align:right;white-space:nowrap;"><button class="small ghost" data-edit-customer="${c.id}">Editar</button> <button class="small danger" data-del-customer="${c.id}">Eliminar</button></td>`; tbody.appendChild(tr); selects.forEach(sel=>{ const opt=document.createElement('option'); opt.value=c.id; opt.textContent=`${c.firstName||''} ${c.lastName||''}`.trim(); sel.appendChild(opt); }); }); }));
+
+      // Vehículos
+      unsub.push(onSnapshot(query(col('vehicles'), orderBy('make')), (snap)=>{ const tbody=$('#vehiclesList'); tbody.innerHTML=''; const vSel=$('#woVehicleSelect'); vSel.innerHTML='<option value="">— Selecciona —</option>'; const apptVSel=$('#apptVehicleSelect'); apptVSel.innerHTML='<option value="">— Selecciona —</option>'; snap.forEach(d=>{ const v={id:d.id, ...d.data()}; cache.vehicles.set(v.id,v); const tr=document.createElement('tr'); tr.innerHTML=`<td>${nameOfCustomer(v.customerId)}</td><td>${v.year||''} ${v.make||''} ${v.model||''}</td><td>${v.vin||''}</td><td>${v.plate||''}</td><td>${v.mileage||''}</td><td style="text-align:right;white-space:nowrap;"><button class="small ghost" data-edit-vehicle="${v.id}">Editar</button> <button class="small danger" data-del-vehicle="${v.id}">Eliminar</button></td>`; tbody.appendChild(tr); [vSel, apptVSel].forEach(sel=>{ const opt=document.createElement('option'); opt.value=v.id; opt.textContent=`${v.year||''} ${v.make||''} ${v.model||''}`.trim(); sel.appendChild(opt); }); }); }));
+
+      // Técnicos
+      unsub.push(onSnapshot(query(col('technicians'), orderBy('name')), (snap)=>{ const tbody=$('#techsList'); tbody.innerHTML=''; const tSel=$('#woTechSelect'); tSel.innerHTML='<option value="">— Selecciona —</option>'; const apptTSel=$('#apptTechSelect'); apptTSel.innerHTML='<option value="">— Selecciona —</option>'; snap.forEach(d=>{ const t={id:d.id, ...d.data()}; cache.technicians.set(t.id,t); const tr=document.createElement('tr'); tr.innerHTML=`<td>${t.name||''}</td><td>${t.phone||''}</td><td>${t.hourlyRate||''}</td><td>${t.skills||''}</td><td style="text-align:right;white-space:nowrap;"><button class="small ghost" data-edit-tech="${t.id}">Editar</button> <button class="small danger" data-del-tech="${t.id}">Eliminar</button></td>`; tbody.appendChild(tr); [tSel, apptTSel].forEach(sel=>{ const opt=document.createElement('option'); opt.value=t.id; opt.textContent=t.name; sel.appendChild(opt); }); }); }));
+
+      // Inventario
+      unsub.push(onSnapshot(query(col('inventory'), orderBy('name')), (snap)=>{ const tbody=$('#partsList'); tbody.innerHTML=''; snap.forEach(d=>{ const p={id:d.id, ...d.data()}; const low=(p.qtyOnHand||0) <= (p.reorderLevel||0); const tr=document.createElement('tr'); tr.innerHTML=`<td>${p.partNumber||''}</td><td>${p.name||''}</td><td>${fmtMoney(p.price)}</td><td>${p.qtyOnHand||0} ${low? ' <span class="badge" style="border-color: var(--warning); color: var(--warning)">bajo</span>':''}</td><td style=\"text-align:right;white-space:nowrap;\"><button class=\"small ghost\" data-edit-part=\"${p.id}\">Editar</button> <button class=\"small danger\" data-del-part=\"${p.id}\">Eliminar</button></td>`; tbody.appendChild(tr); }); }));
+
+      // Órdenes de Trabajo
+      unsub.push(onSnapshot(query(col('workOrders'), orderBy('createdAt')), (snap)=>{ const tbody=$('#woList'); tbody.innerHTML=''; const invoiceWoSel=$('#invoiceWoSelect'); invoiceWoSel.innerHTML='<option value="">— Selecciona —</option>'; snap.forEach(d=>{ const w={id:d.id, ...d.data()}; const laborTotal=(w.laborHours||0) * (w.laborRate || (cache.technicians.get(w.technicianId)?.hourlyRate || 0)); const itemsTotal=(w.items||[]).reduce((s,it)=> s + (Number(it.qty||0) * Number(it.unitPrice||0)), 0); const total=laborTotal + itemsTotal; const tr=document.createElement('tr'); tr.innerHTML=`<td>${w.woNumber||d.id}</td><td>${labelOfVehicle(w.vehicleId)}</td><td>${nameOfTech(w.technicianId)}</td><td><span class=\"badge\">${w.status||'Borrador'}</span></td><td>${(w.laborHours||0)}h × ${fmtMoney(w.laborRate || (cache.technicians.get(w.technicianId)?.hourlyRate || 0))}</td><td>${fmtMoney(total)}</td><td style=\"text-align:right;white-space:nowrap;\"><button class=\"small ghost\" data-edit-wo=\"${w.id}\">Editar</button> <button class=\"small danger\" data-del-wo=\"${w.id}\">Eliminar</button></td>`; tbody.appendChild(tr); const opt=document.createElement('option'); opt.value=w.id; opt.textContent=w.woNumber||w.id; invoiceWoSel.appendChild(opt); }); }));
+
+      // Citas
+      unsub.push(onSnapshot(query(col('appointments'), orderBy('scheduledAt')), (snap)=>{ const tbody=$('#apptList'); tbody.innerHTML=''; snap.forEach(d=>{ const a={id:d.id, ...d.data()}; const when=a.scheduledAt? new Date(a.scheduledAt).toLocaleString('es-MX'): '—'; const tr=document.createElement('tr'); tr.innerHTML=`<td>${when}</td><td>${nameOfCustomer(a.customerId)}</td><td>${labelOfVehicle(a.vehicleId)}</td><td>${nameOfTech(a.technicianId)}</td><td>${a.reason||''}</td><td style=\"text-align:right;white-space:nowrap;\"><button class=\"small ghost\" data-edit-appt=\"${a.id}\">Editar</button> <button class=\"small danger\" data-del-appt=\"${a.id}\">Eliminar</button></td>`; tbody.appendChild(tr); }); }));
+
+      // Facturas
+      unsub.push(onSnapshot(query(col('invoices'), orderBy('createdAt')), (snap)=>{ const tbody=$('#invoiceList'); tbody.innerHTML=''; snap.forEach(d=>{ const inv={id:d.id, ...d.data()}; const taxable=Math.max(0,(inv.subtotal||0) - (inv.discount||0)); const tax= taxable * ((inv.taxPercent||0)/100); const total= Math.max(0, taxable + tax); const tr=document.createElement('tr'); tr.innerHTML=`<td>${inv.number||d.id}</td><td>${inv.workOrderId||'—'}</td><td>${inv.status||'Borrador'}</td><td>${fmtMoney(total)}</td><td style=\"text-align:right;white-space:nowrap;\"><button class=\"small ghost\" data-edit-invoice=\"${inv.id}\">Editar</button> <button class=\"small danger\" data-del-invoice=\"${inv.id}\">Eliminar</button></td>`; tbody.appendChild(tr); }); }));
+    }
+
+    // CRUD handlers
+    document.addEventListener('click', async (e)=>{
+      const el=e.target;
+      if(el.matches('[data-edit-customer]')){ const id=el.getAttribute('data-edit-customer'); const f=$('#customerForm'); const c=(await getDoc(byId('customers',id))).data(); f.id.value=id; f.firstName.value=c.firstName||''; f.lastName.value=c.lastName||''; f.phone.value=c.phone||''; f.email.value=c.email||''; f.address.value=c.address||''; setActiveTab('Customers'); }
+      if(el.matches('[data-del-customer]')){ const id=el.getAttribute('data-del-customer'); if(confirm('¿Eliminar este cliente?')){ await deleteDoc(byId('customers',id)); toast('Eliminado'); } }
+
+      if(el.matches('[data-edit-vehicle]')){ const id=el.getAttribute('data-edit-vehicle'); const f=$('#vehicleForm'); const v=(await getDoc(byId('vehicles',id))).data(); f.id.value=id; f.customerId.value=v.customerId||''; f.make.value=v.make||''; f.model.value=v.model||''; f.year.value=v.year||''; f.vin.value=v.vin||''; f.plate.value=v.plate||''; f.mileage.value=v.mileage||''; setActiveTab('Vehicles'); }
+      if(el.matches('[data-del-vehicle]')){ const id=el.getAttribute('data-del-vehicle'); if(confirm('¿Eliminar este vehículo?')){ await deleteDoc(byId('vehicles',id)); toast('Eliminado'); } }
+
+      if(el.matches('[data-edit-tech]')){ const id=el.getAttribute('data-edit-tech'); const f=$('#techForm'); const t=(await getDoc(byId('technicians',id))).data(); f.id.value=id; f.name.value=t.name||''; f.phone.value=t.phone||''; f.skills.value=t.skills||''; f.hourlyRate.value=t.hourlyRate||''; setActiveTab('Technicians'); }
+      if(el.matches('[data-del-tech]')){ const id=el.getAttribute('data-del-tech'); if(confirm('¿Eliminar este técnico?')){ await deleteDoc(byId('technicians',id)); toast('Eliminado'); } }
+
+      if(el.matches('[data-edit-part]')){ const id=el.getAttribute('data-edit-part'); const f=$('#partForm'); const p=(await getDoc(byId('inventory',id))).data(); f.id.value=id; f.partNumber.value=p.partNumber||''; f.name.value=p.name||''; f.description.value=p.description||''; f.supplier.value=p.supplier||''; f.cost.value=p.cost||''; f.price.value=p.price||''; f.qtyOnHand.value=p.qtyOnHand||''; f.reorderLevel.value=p.reorderLevel||''; setActiveTab('Inventory'); }
+      if(el.matches('[data-del-part]')){ const id=el.getAttribute('data-del-part'); if(confirm('¿Eliminar este artículo?')){ await deleteDoc(byId('inventory',id)); toast('Eliminado'); } }
+
+      if(el.matches('[data-edit-wo]')){ const id=el.getAttribute('data-edit-wo'); const f=$('#woForm'); const w=(await getDoc(byId('workOrders',id))).data(); f.id.value=id; f.woNumber.value=w.woNumber||''; f.vehicleId.value=w.vehicleId||''; f.technicianId.value=w.technicianId||''; f.status.value=w.status||'Borrador'; f.scheduledAt.value = w.scheduledAt ? new Date(w.scheduledAt).toISOString().slice(0,16):''; f.laborHours.value=w.laborHours||''; f.laborRate.value=w.laborRate||''; f.complaint.value=w.complaint||''; f.notes.value=w.notes||''; const cont=$('#woItems'); cont.innerHTML=''; (w.items||[]).forEach(addItemRow); setActiveTab('Work Orders'); }
+      if(el.matches('[data-del-wo]')){ const id=el.getAttribute('data-del-wo'); if(confirm('¿Eliminar esta OT?')){ await deleteDoc(byId('workOrders',id)); toast('Eliminado'); } }
+
+      if(el.matches('[data-edit-appt]')){ const id=el.getAttribute('data-edit-appt'); const f=$('#apptForm'); const a=(await getDoc(byId('appointments',id))).data(); f.id.value=id; f.customerId.value=a.customerId||''; f.vehicleId.value=a.vehicleId||''; f.technicianId.value=a.technicianId||''; f.scheduledAt.value=a.scheduledAt ? new Date(a.scheduledAt).toISOString().slice(0,16):''; f.reason.value=a.reason||''; setActiveTab('Appointments'); }
+      if(el.matches('[data-del-appt]')){ const id=el.getAttribute('data-del-appt'); if(confirm('¿Eliminar esta cita?')){ await deleteDoc(byId('appointments',id)); toast('Eliminado'); } }
+
+      if(el.matches('[data-edit-invoice]')){ const id=el.getAttribute('data-edit-invoice'); const f=$('#invoiceForm'); const inv=(await getDoc(byId('invoices',id))).data(); f.id.value=id; f.number.value=inv.number||''; f.workOrderId.value=inv.workOrderId||''; f.status.value=inv.status||'Borrador'; f.subtotal.value=inv.subtotal||''; f.taxPercent.value=inv.taxPercent||16; f.discount.value=inv.discount||0; f.notes.value=inv.notes||''; setActiveTab('Invoices'); }
+      if(el.matches('[data-del-invoice]')){ const id=el.getAttribute('data-del-invoice'); if(confirm('¿Eliminar esta factura?')){ await deleteDoc(byId('invoices',id)); toast('Eliminado'); } }
+
+      if(el.matches('[data-remove-item]')){ el.closest('.item-row').remove(); }
+    });
+
+    // Submit handlers
+    $('#customerForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const f=e.target; const {id, ...payload}=formToObj(f); try{ if(id) await updateDoc(byId('customers',id), payload); else await addDoc(col('customers'), {...payload, createdAt: serverTimestamp()}); toast('Guardado'); resetForm(f);}catch(err){ toast(err.message,'error'); }});
+    $('#vehicleForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const f=e.target; const {id, ...payload}=formToObj(f); try{ if(id) await updateDoc(byId('vehicles',id), payload); else await addDoc(col('vehicles'), {...payload, createdAt: serverTimestamp()}); toast('Guardado'); resetForm(f);}catch(err){ toast(err.message,'error'); }});
+    $('#techForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const f=e.target; const {id, ...payload}=formToObj(f); try{ if(id) await updateDoc(byId('technicians',id), payload); else await addDoc(col('technicians'), {...payload, createdAt: serverTimestamp()}); toast('Guardado'); resetForm(f);}catch(err){ toast(err.message,'error'); }});
+    $('#partForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const f=e.target; const {id, ...payload}=formToObj(f); try{ if(id) await updateDoc(byId('inventory',id), payload); else await addDoc(col('inventory'), {...payload, createdAt: serverTimestamp()}); toast('Guardado'); resetForm(f);}catch(err){ toast(err.message,'error'); }});
+
+    function addItemRow(item={ description:'', qty:1, unitPrice:0, partId:'' }){ const row=document.createElement('div'); row.className='item-row'; row.innerHTML=`<input placeholder=\"Descripción\" value=\"${item.description||''}\" /><input type=\"number\" step=\"1\" min=\"0\" value=\"${item.qty||1}\" /><input type=\"number\" step=\"0.01\" min=\"0\" value=\"${item.unitPrice||0}\" /><input placeholder=\"Id Parte (opcional)\" value=\"${item.partId||''}\" /><button type=\"button\" class=\"small danger\" title=\"Quitar\" data-remove-item>×</button>`; $('#woItems').appendChild(row); }
+    $('#addWoItemBtn').addEventListener('click',()=>addItemRow());
+    function collectWoItems(){ return Array.from($('#woItems').children).map(row=>{ const [desc,qty,unit,part]=Array.from(row.querySelectorAll('input')); return { description:desc.value, qty:Number(qty.value||0), unitPrice:Number(unit.value||0), partId:part.value }; }); }
+
+    $('#woForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const f=e.target; const base=formToObj(f); const items=collectWoItems(); try{ const {id, woNumber, scheduledAt, ...rest}=base; const payload={...rest, woNumber: woNumber || autoNumber('OT'), scheduledAt: scheduledAt? new Date(String(scheduledAt)).toISOString(): null, items, createdAt: serverTimestamp()}; if(!payload.laborRate && payload.technicianId){ const ts=cache.technicians.get(payload.technicianId); if(ts) payload.laborRate=Number(ts.hourlyRate||0); } if(id) await updateDoc(byId('workOrders',id), payload); else await addDoc(col('workOrders'), payload); toast('Guardado'); resetForm(f);}catch(err){ toast(err.message,'error'); }});
+
+    $('#apptForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const f=e.target; const {id, scheduledAt, ...rest}=formToObj(f); try{ const payload={...rest, scheduledAt: new Date(String(scheduledAt)).toISOString(), createdAt: serverTimestamp()}; if(id) await updateDoc(byId('appointments',id), payload); else await addDoc(col('appointments'), payload); toast('Guardado'); resetForm(f);}catch(err){ toast(err.message,'error'); }});
+
+    $('#invoiceForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const f=e.target; const data=formToObj(f); try{ const {id, number, ...rest}=data; const payload={...rest, number: number || autoNumber('FAC'), createdAt: serverTimestamp()}; if(id) await updateDoc(byId('invoices',id), payload); else await addDoc(col('invoices'), payload); toast('Guardado'); resetForm(f);}catch(err){ toast(err.message,'error'); }});
+
+    window.addEventListener('load', ()=> setActiveTab(localStorage.getItem('activeTab')||TAB_KEYS[0]));
+  </script>
+</body>
+</html>
